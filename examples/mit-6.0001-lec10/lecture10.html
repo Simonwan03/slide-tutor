@@ -61,14 +61,15 @@ button { font: inherit; }
 }
 .chip:hover { background: var(--hover); }
 .chip[aria-pressed="true"], .chip[aria-expanded="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
-#toggle-toc { display: none; }
 
 /* ---- 左侧目录 ---- */
 .toc {
   position: fixed; top: var(--topbar); bottom: 0; left: 0; width: var(--toc-w); z-index: 20;
   overflow-y: auto; padding: 14px 10px 48px; font-size: 13px; line-height: 1.5;
   background: var(--bg); border-right: 1px solid var(--line);
+  transition: transform .2s ease;
 }
+body.toc-hidden .toc { transform: translateX(-100%); visibility: hidden; }
 .toc ol { list-style: none; margin: 0; padding: 0; }
 .toc-sec { display: block; padding: 12px 8px 4px; font-weight: 600; color: var(--text); text-decoration: none; }
 .toc-page { display: flex; gap: 8px; padding: 3px 8px; border-radius: 6px; color: var(--muted); text-decoration: none; }
@@ -81,7 +82,8 @@ button { font: inherit; }
 .toc-page.has-issues::after { content: "!"; margin-left: auto; padding-left: 4px; font-weight: 700; color: var(--err); }
 
 /* ---- 正文 ---- */
-main { margin-left: var(--toc-w); padding: calc(var(--topbar) + 20px) 32px 96px; }
+main { margin-left: var(--toc-w); padding: calc(var(--topbar) + 20px) 32px 96px; transition: margin-left .2s ease; }
+body.toc-hidden main { margin-left: 0; }
 .wrap { max-width: 1400px; margin: 0 auto; }
 .legend {
   display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center;
@@ -239,8 +241,7 @@ footer { margin-top: 40px; font-size: 12px; color: var(--faint); text-align: cen
 
 /* ---- 窄屏 ---- */
 @media (max-width: 1100px) {
-  #toggle-toc { display: inline-block; }
-  .toc { transform: translateX(-100%); transition: transform .2s ease; visibility: hidden; background: var(--surface); }
+  .toc { transform: translateX(-100%); visibility: hidden; background: var(--surface); }
   body.toc-open .toc { transform: none; visibility: visible; box-shadow: 8px 0 24px rgba(0,0,0,.08); }
   main { margin-left: 0; }
 }
@@ -1177,18 +1178,39 @@ document.addEventListener("DOMContentLoaded", function () {
   var tocBtn = document.getElementById("toggle-toc");
   var termsBtn = document.getElementById("toggle-terms");
   var suppBtn = document.getElementById("toggle-supp");
+  var narrow = window.matchMedia("(max-width: 1100px)");
   function setOpen(cls, btn, open) {
     body.classList.toggle(cls, open);
     btn.setAttribute("aria-expanded", String(open));
   }
-  tocBtn.addEventListener("click", function () { setOpen("toc-open", tocBtn, !body.classList.contains("toc-open")); });
+  // 目录：宽屏时常驻左侧，可以收起（记住选择）；窄屏时默认隐藏，点按钮弹出
+  var tocKey = "lecture-explainer:toc-hidden";
+  function syncToc() {
+    var shown = narrow.matches ? body.classList.contains("toc-open") : !body.classList.contains("toc-hidden");
+    tocBtn.setAttribute("aria-expanded", String(shown));
+  }
+  body.classList.toggle("toc-hidden", load(tocKey, false));
+  syncToc();
+  tocBtn.addEventListener("click", function () {
+    if (narrow.matches) {
+      body.classList.toggle("toc-open");
+    } else {
+      var hide = !body.classList.contains("toc-hidden");
+      body.classList.toggle("toc-hidden", hide);
+      save(tocKey, hide);
+    }
+    syncToc();
+  });
+  var onNarrowChange = function () { body.classList.remove("toc-open"); syncToc(); };
+  if (narrow.addEventListener) narrow.addEventListener("change", onNarrowChange); else narrow.addListener(onNarrowChange);
+  window.addEventListener("resize", syncToc);
   termsBtn.addEventListener("click", function () {
     var open = !body.classList.contains("terms-open");
     setOpen("terms-open", termsBtn, open);
     if (open) document.getElementById("terms-search").focus({ preventScroll: true });
   });
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") { setOpen("terms-open", termsBtn, false); setOpen("toc-open", tocBtn, false); }
+    if (e.key === "Escape") { setOpen("terms-open", termsBtn, false); body.classList.remove("toc-open"); syncToc(); }
   });
   var suppKey = "lecture-explainer:supp-tint";
   function paintSupp(on) { body.classList.toggle("no-supp-tint", !on); suppBtn.setAttribute("aria-pressed", String(on)); }
@@ -1199,7 +1221,6 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   // ---- 点击来源标签、目录、术语：跳到那一页并闪一下课件图 ----
-  var narrow = window.matchMedia("(max-width: 1100px)");
   document.addEventListener("click", function (e) {
     var a = e.target.closest("a[data-page]");
     if (!a) return;
@@ -1207,7 +1228,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (slide) {
       slide.classList.remove("flash"); void slide.offsetWidth; slide.classList.add("flash");
     }
-    if (narrow.matches) { setOpen("toc-open", tocBtn, false); }
+    if (narrow.matches) { body.classList.remove("toc-open"); syncToc(); }
     if (a.closest(".terms") && window.matchMedia("(max-width: 760px)").matches) { setOpen("terms-open", termsBtn, false); }
   });
 

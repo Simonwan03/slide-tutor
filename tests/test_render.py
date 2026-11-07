@@ -134,6 +134,8 @@ def test_render_full_lecture(lecture):
     assert "<strong>selection</strong>" in html and "按条件选行" in html
     # 没有书签标题的页在目录里用 gist
     assert ">习题页</span>" in html
+    # 目录可以收起
+    assert 'id="toggle-toc"' in html and "toc-hidden" in html
     # 依赖固定版本
     assert "katex@0.16.11" in html and "highlight.js/11.9.0" in html
 
