@@ -8,14 +8,11 @@ A [Claude Code](https://claude.com/claude-code) skill that turns lecture-slide P
 
 ## What you get
 
-One HTML page per lecture. Each row of the page looks like this:
+One HTML page per lecture: a table of contents on the left, then each slide next to its explanation.
 
-| Left: the original slides | Right: the explanation |
-|---|---|
-| Slide 12 (image) | **Slides 12–13 · Example** |
-| Slide 13 (image) | Key point one … `[课件 p.12]` |
-| | A derivation the slide skipped … `[补充]` |
-| | ▸ Hint 1 ▸ Hint 2 ▸ Show solution |
+![Generated page for MIT 6.0001 Lecture 10](examples/mit-6.0001-lec10/screenshot.png)
+
+<sub>Example generated from MIT OpenCourseWare 6.0001, Lecture 10 (CC BY-NC-SA 4.0). To see the whole page, download [lecture10.html](examples/mit-6.0001-lec10/lecture10.html) and open it in a browser. See [examples/](examples/mit-6.0001-lec10/LICENSE.md) for attribution.</sub>
 
 - **Only the key points.** Each slide, or group of adjacent slides, gets 1–3 points. Skipped derivations are filled in, and diagrams, formulas and code are explained. Example slides and "(contd.)" slides are explained together with the slide before them.
 - **Every sentence has a source.**
@@ -135,7 +132,7 @@ It is tested mainly on PDFs exported from PowerPoint. Beamer PDFs should work. S
 
 ## Copyright
 
-This repository contains code only. Only run the skill on slides you have the right to use, and don't publish pages generated from other people's slides: every page contains screenshots of all the slides.
+The code is MIT-licensed. The example in `examples/` is generated from openly licensed slides and is shared under their license, CC BY-NC-SA 4.0. Only run the skill on slides you have the right to use, and don't publish pages generated from other people's slides: every page contains screenshots of all the slides.
 
 ## Development
 
