@@ -138,6 +138,17 @@ def test_render_full_lecture(lecture):
     assert "katex@0.16.11" in html and "highlight.js/11.9.0" in html
 
 
+def test_lecture_title(lecture):
+    course_dir, work = lecture
+    out, _ = render.render_lecture(course_dir, "L01")
+    assert "<h1>Title 1</h1>" in out.read_text(encoding="utf-8")       # 没写 title 时用第 1 页的书签
+    outline = common.read_json(work / "outline.json")
+    outline["title"] = "整讲标题（Lecture Title）"
+    common.write_json(work / "outline.json", outline)
+    out, _ = render.render_lecture(course_dir, "L01")
+    assert "<h1>整讲标题（Lecture Title）</h1>" in out.read_text(encoding="utf-8")
+
+
 def test_reading_time():
     blocks = [
         {"kind": "explain", "title": "t", "segments": [seg("一" * 300)]},

@@ -33,6 +33,7 @@
 ```json
 {
   "lecture": "L03",
+  "title": "关系代数与关系演算（Relational Algebra and Calculus）",
   "sections": [
     {"id": "s01", "title": "引言（Introduction）", "pages": [1, 4]},
     {"id": "s02", "title": "关系代数（Relational Algebra）", "pages": [5, 29]},
@@ -42,6 +43,7 @@
 }
 ```
 
+- `title` 是这一讲的标题，显示在页面顶部。写法和节名一样，中文在前，括号里附英文原名，英文原名取自课件标题页。
 - `id` 按顺序编号：`s01`、`s02`……
 - `pages` 是 `[起始页, 结束页]`，两端都包含。
 - 所有节合起来必须从第 1 页连续覆盖到最后一页，不能有空隙或重叠。

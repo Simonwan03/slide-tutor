@@ -247,7 +247,7 @@ def build_model(course_dir: Path, lecture_id: str) -> dict:
     first = by_no.get(1, {})
     return {
         "course": course.get("name", ""),
-        "lecture": {"id": lecture_id, "title": first.get("title") or lecture_id},
+        "lecture": {"id": lecture_id, "title": outline.get("title") or first.get("title") or lecture_id},
         "storage_key": f"lecture-explainer:{course.get('name', '')}:{lecture_id}",
         "sections": sections,
         "terms": terms,
