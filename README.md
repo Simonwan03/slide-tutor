@@ -1,37 +1,69 @@
 # slide-tutor
 
-一个 [Claude Code](https://claude.com/claude-code) skill：把课程课件 PDF 变成**左边课件原页、右边中文讲解**的 HTML 学习笔记。
+**English** | [中文](README.zh-CN.md)
 
-A Claude Code skill that turns lecture-slide PDFs into a side-by-side study page: the original slide on the left, a concise Chinese explanation (English terms kept) on the right.
+A [Claude Code](https://claude.com/claude-code) skill that turns lecture-slide PDFs into a side-by-side study page: the original slide on the left, a concise explanation on the right, and every sentence tagged with where it came from.
 
-## 特点
+> The explanations are written in **Chinese**, with English technical terms kept as they are.
 
-- **只讲重点**：每页或每组相邻页讲 1–3 个要点，补上课件跳过的推导，解释图表、公式和代码；例子页、续页和前一页合在一起讲。
-- **每句话都标来源**：`[课件 p.N]` 表示课件上有，`[补充]` 表示讲解补充的内容。点击标签会跳到对应的课件页。拿不准的地方标"待核实"。
-- **交互式习题**：先给题目分析，再逐级给提示，完整解答默认隐藏。课件上印着答案的页先遮住。
-- **方便阅读**：可跳转的目录、术语表、补充内容底色开关、浅色/深色主题，开头写着预计阅读时间。公式用 KaTeX，代码用 highlight.js。
-- **可以发到手机上看**：`--standalone` 会生成一个单文件 HTML，课件图都嵌在里面。
-- **模型和脚本分工**：模型看懂每页图片、切节、讲解。提取、校验、渲染由 Python 脚本完成。讲解先通过 JSON Schema 和一组规则检查（页码覆盖、来源、公式语法、提示是否泄露答案等），然后才会渲染成页面。
+## What you get
 
-## 安装
+One HTML page per lecture. Each row of the page looks like this:
 
-需要 Claude Code，以及 Python 3.10 或更高版本。
+| Left: the original slides | Right: the explanation |
+|---|---|
+| Slide 12 (image) | **Slides 12–13 · Example** |
+| Slide 13 (image) | Key point one … `[课件 p.12]` |
+| | A derivation the slide skipped … `[补充]` |
+| | ▸ Hint 1 ▸ Hint 2 ▸ Show solution |
 
-把 `lecture-explainer/` 文件夹复制到个人 skill 目录或项目的 skill 目录：
+- **Only the key points.** Each slide, or group of adjacent slides, gets 1–3 points. Skipped derivations are filled in, and diagrams, formulas and code are explained. Example slides and "(contd.)" slides are explained together with the slide before them.
+- **Every sentence has a source.**
+  - `[课件 p.N]` means "on slide N". Click the tag to jump to that slide.
+  - `[补充]` means "added by the explanation".
+  - Anything the model is unsure about is marked "待核实" ("to verify").
+- **Interactive exercises.** You get an analysis first, then hints one at a time, and the full solution stays hidden until you click. Slides that print the answer are covered.
+- **Easy to read.**
+  - A clickable table of contents and a glossary.
+  - A toggle that highlights the added material.
+  - Light and dark themes.
+  - An estimated reading time at the top.
+- **Readable on your phone.** You can export the page as a single HTML file with all slide images embedded.
+
+## Quick start
+
+### 1. Check what you need
+
+- Claude Code, in the terminal, the desktop app or an IDE.
+- Python 3.10 or newer. To check, run `python --version`; on Windows, `py -3 --version` also works.
+
+You don't need to install anything else by hand. The Python packages (PyMuPDF, Jinja2, jsonschema) are installed automatically the first time you use the skill. They go into their own environment at `~/.lecture-explainer/venv`, so your system Python is left alone. This takes about a minute, once.
+
+### 2. Install the skill
+
+macOS / Linux:
 
 ```bash
-# 个人：所有项目都能用
-cp -r lecture-explainer ~/.claude/skills/
-
-# 或只在某个项目里用
-cp -r lecture-explainer <你的项目>/.claude/skills/
+git clone https://github.com/Simonwan03/slide-tutor.git
+mkdir -p ~/.claude/skills
+cp -r slide-tutor/lecture-explainer ~/.claude/skills/
 ```
 
-依赖（PyMuPDF、Jinja2、jsonschema）会在第一次使用时自动装进 `~/.lecture-explainer/venv`，大约需要 1 分钟，不会改动系统的 Python 环境。
+Windows (PowerShell):
 
-## 使用
+```powershell
+git clone https://github.com/Simonwan03/slide-tutor.git
+New-Item -ItemType Directory -Force "$HOME\.claude\skills" | Out-Null
+Copy-Item -Recurse slide-tutor\lecture-explainer "$HOME\.claude\skills\"
+```
 
-把一门课的课件 PDF 放在同一个文件夹里，例如：
+To check that it worked, type `/lecture` in Claude Code. `/lecture-explainer` should appear in the list; if it doesn't, restart Claude Code.
+
+> If you only want the skill in one project, copy the folder into `<your-project>/.claude/skills/` instead.
+
+### 3. Put your slides in a folder
+
+Put the PDFs of one course in a single folder. A `lectures/` subfolder is optional:
 
 ```
 my-course/
@@ -41,66 +73,103 @@ my-course/
     └── ...
 ```
 
-然后在 Claude Code 里输入：
+### 4. Run it
+
+Open Claude Code in the folder that contains `my-course/`, then type:
 
 ```
-/lecture-explainer my-course L04
+/lecture-explainer my-course SQL
 ```
 
-参数是课程目录（或某个 PDF）和讲次。讲次可以写编号、文件名或主题（如 `SQL`），不写时 Claude 会问你。
+- **The first argument** is the course folder, or a single PDF.
+- **The second argument** is the lecture to explain. You can give its number (`L04`), part of the file name, or the topic (`SQL`). If you leave it out, Claude asks you.
 
-为了避免误触发（随口问一个课件上的问题，却启动了整讲讲解），这个 skill 设成了只能手动调用：Claude 不会自己启动它，必须输入 `/lecture-explainer`。
+The skill then runs on its own:
 
-启动后 skill 会自动：
+1. It sorts the PDFs into lecture order (`L01`, `L02`, …) and saves the order in `my-course/course.json`.
+2. It extracts each slide as an image, plus its text.
+3. It splits the lecture into sections.
+4. It explains the sections in parallel, with up to 4 subagents at once.
+5. It checks the explanations and builds the page.
 
-1. 生成 `course.json`，按 PDF 创建日期排出讲次顺序（L01、L02……）
-2. 提取每页图片和文字
-3. 把这一讲切成若干节
-4. 用 subagent 并行讲解各节（同时最多 4 个）
-5. 校验，然后生成 `my-course/output/<讲次>/index.html`
+A 50–90 slide lecture takes about 15–40 minutes.
 
-用浏览器打开 `index.html` 即可（需要联网加载 KaTeX 和 highlight.js）。中途中断了，在同一个对话里说"继续"，或者在新对话里再运行一次同样的命令，就会接着做，已完成的部分不会重做。
+### 5. Open the result
 
-一讲 50–90 页大约需要 15–40 分钟。
+```
+my-course/
+├── course.json            # lecture order (generated)
+└── output/
+    └── L04/
+        ├── index.html     # ← open this in your browser
+        ├── img/           # slide images
+        └── work/          # intermediate files
+```
 
-## 开发
+The page needs an internet connection, because it loads KaTeX and highlight.js from a CDN.
+
+## FAQ
+
+**Why doesn't Claude start this skill on its own?**
+This is on purpose. One run covers a whole lecture and uses roughly a million tokens. To keep a casual question about a slide from starting a full run, the skill only starts when you type `/lecture-explainer`.
+
+**The run was interrupted. Do I start over?**
+No. In the same conversation, say "continue". In a new conversation, run the same command again. Finished sections are not redone.
+
+**How do I read it on my phone?**
+In the same conversation, ask for the standalone version, for example "I want to read this on my phone". You get `L04-standalone.html` next to `index.html`. It is a single file with all images embedded, so you can send it to your phone.
+
+**One section came out badly. Can I redo just that part?**
+Yes. Delete `output/L04/work/sections/<section>.json` and run the command again. Only that section is rewritten.
+
+**The lecture order is wrong.**
+Edit the order in `course.json` before you generate any lecture.
+
+**Which PDFs work?**
+It is tested mainly on PDFs exported from PowerPoint. Beamer PDFs should work. Scanned PDFs aren't specially supported.
+
+## Limitations
+
+- The explanations are generated by a model and can be wrong. Use the source tags and the "待核实" marks to see what to check against the slides.
+- Explanations are currently only in Chinese.
+
+## Copyright
+
+This repository contains code only. Only run the skill on slides you have the right to use, and don't publish pages generated from other people's slides: every page contains screenshots of all the slides.
+
+## Development
 
 ```bash
 python -m venv .venv
-.venv/Scripts/pip install -r requirements-dev.txt   # Linux/macOS: .venv/bin/pip
-.venv/Scripts/python -m pytest
+.venv/Scripts/pip install -r requirements-dev.txt   # macOS/Linux: .venv/bin/pip
+.venv/Scripts/python -m pytest                       # macOS/Linux: .venv/bin/python
 ```
 
-测试只用代码合成的 PDF。
+The tests use only PDFs generated by code.
 
-目录结构：
+The model reads the slides, splits the lecture into sections and writes the explanations. Python scripts do the extraction, checking and rendering. Each explanation must pass a JSON Schema plus a set of checks before it is rendered:
+
+- every page is covered
+- every sentence has a source
+- the math syntax is valid
+- hints don't give away the answer
 
 ```
 lecture-explainer/
-├── SKILL.md                  # 给 Claude 的流程说明
+├── SKILL.md              # workflow instructions for Claude
 ├── scripts/
-│   ├── lx.py                 # 统一入口：init / extract / prepare / validate / render / setup
-│   ├── bootstrap.py          # 自动建虚拟环境、装依赖
-│   ├── extract.py            # PDF → 每页图片 + 文字
-│   ├── prepare.py            # 检查切节，生成每个讲解单元的输入包
-│   ├── validate.py           # 讲解 JSON 的格式和规则检查
-│   ├── render.py             # 讲解 JSON → HTML
-│   └── schema/               # JSON Schema
-├── references/               # 切节指南、讲解指南、JSON 格式说明
-└── assets/template.html      # 页面模板
+│   ├── lx.py             # single entry point: init / extract / prepare / validate / render / setup
+│   ├── bootstrap.py      # creates the venv and installs dependencies
+│   ├── extract.py        # PDF → slide images + text
+│   ├── prepare.py        # checks the section outline, builds each unit's input
+│   ├── validate.py       # checks the explanation JSON
+│   ├── render.py         # explanation JSON → HTML
+│   └── schema/           # JSON Schemas
+├── references/           # guides for outlining and explaining, JSON format
+└── assets/template.html  # page template
 ```
 
-`PLAN.md` 是完整的设计文档和开发记录。
-
-## 局限
-
-- 目前主要在 PowerPoint 导出的 PDF 上测试过。Beamer、扫描版 PDF 还没有专门适配。
-- 讲解由模型生成，可能出错。来源标签和"待核实"标记可以帮助判断哪些内容需要对照课件核实。
-- 讲解语言目前是中文。
-
-## 版权说明
-
-本仓库只包含代码。请只对你有权使用的课件运行这个 skill，也不要公开发布由他人课件生成的页面，因为页面里有课件每一页的截图。
+[PLAN.md](PLAN.md) holds the full design notes and the development log, in Chinese.
 
 ## License
 
