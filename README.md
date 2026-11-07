@@ -41,11 +41,17 @@ my-course/
     └── ...
 ```
 
-然后在 Claude Code 里直接说：
+然后在 Claude Code 里输入：
 
-> 帮我讲解 my-course 里的 SQL 那一讲
+```
+/lecture-explainer my-course L04
+```
 
-或者用 `/lecture-explainer` 调用。skill 会自动：
+参数是课程目录（或某个 PDF）和讲次。讲次可以写编号、文件名或主题（如 `SQL`），不写时 Claude 会问你。
+
+为了避免误触发（随口问一个课件上的问题，却启动了整讲讲解），这个 skill 设成了只能手动调用：Claude 不会自己启动它，必须输入 `/lecture-explainer`。
+
+启动后 skill 会自动：
 
 1. 生成 `course.json`，按 PDF 创建日期排出讲次顺序（L01、L02……）
 2. 提取每页图片和文字
@@ -53,7 +59,7 @@ my-course/
 4. 用 subagent 并行讲解各节（同时最多 4 个）
 5. 校验，然后生成 `my-course/output/<讲次>/index.html`
 
-用浏览器打开 `index.html` 即可（需要联网加载 KaTeX 和 highlight.js）。中途中断了，再说一次"继续讲解"就会接着做，已完成的部分不会重做。
+用浏览器打开 `index.html` 即可（需要联网加载 KaTeX 和 highlight.js）。中途中断了，在同一个对话里说"继续"，或者在新对话里再运行一次同样的命令，就会接着做，已完成的部分不会重做。
 
 一讲 50–90 页大约需要 15–40 分钟。
 
