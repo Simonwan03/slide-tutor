@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ lecture.id }} {{ lecture.title }} · 讲解</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" media="(prefers-color-scheme: light)">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" media="(prefers-color-scheme: dark)">
+<style>
+:root {
+  --topbar: 56px;
+  --toc-w: 272px;
+  --bg: #f6f5f2; --surface: #ffffff; --text: #1d1f23; --muted: #5f6670; --faint: #9aa0a8;
+  --line: #e3e1dc; --hover: #efeee9;
+  --accent: #2457b3; --accent-soft: #e8eefa; --on-accent: #ffffff;
+  --supp-bg: #fbf4e2; --supp-tag: #8a5800; --supp-tag-bg: #f6e9c6;
+  --unv: #c2410c; --unv-soft: #fde9dc;
+  --warn: #d68a00; --warn-soft: #fdf6e6;
+  --err: #b42318; --err-soft: #fdecea;
+  --code-bg: #f2f1ed;
+  --slide-filter: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #131416; --surface: #1b1c1f; --text: #e7e7e9; --muted: #a0a6ae; --faint: #6d737b;
+    --line: #2c2e33; --hover: #24262a;
+    --accent: #8cb4ff; --accent-soft: #1e2b44; --on-accent: #0d1626;
+    --supp-bg: #2e2716; --supp-tag: #e8bd62; --supp-tag-bg: #3a3018;
+    --unv: #fb923c; --unv-soft: #3b2416;
+    --warn: #f2b23a; --warn-soft: #2c2414;
+    --err: #f87171; --err-soft: #3a1c1c;
+    --code-bg: #202124;
+    --slide-filter: brightness(.9);
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-padding-top: calc(var(--topbar) + 12px); }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.8 system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+}
+a { color: var(--accent); }
+button { font: inherit; }
+
+/* ---- 顶栏 ---- */
+.topbar {
+  position: fixed; inset: 0 0 auto 0; height: var(--topbar); z-index: 30;
+  display: flex; align-items: center; gap: 12px; padding: 0 16px;
+  background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.heading { flex: 1; min-width: 0; }
+.heading .course { display: block; font-size: 12px; line-height: 1.3; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.heading h1 { margin: 0; font-size: 16px; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tools { display: flex; align-items: center; gap: 8px; }
+.progress { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.chip {
+  font-size: 13px; line-height: 1; padding: 8px 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); color: var(--text); white-space: nowrap;
+}
+.chip:hover { background: var(--hover); }
+.chip[aria-pressed="true"], .chip[aria-expanded="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+#toggle-toc { display: none; }
+
+/* ---- 左侧目录 ---- */
+.toc {
+  position: fixed; top: var(--topbar); bottom: 0; left: 0; width: var(--toc-w); z-index: 20;
+  overflow-y: auto; padding: 14px 10px 48px; font-size: 13px; line-height: 1.5;
+  background: var(--bg); border-right: 1px solid var(--line);
+}
+.toc ol { list-style: none; margin: 0; padding: 0; }
+.toc-sec { display: block; padding: 12px 8px 4px; font-weight: 600; color: var(--text); text-decoration: none; }
+.toc-page { display: flex; gap: 8px; padding: 3px 8px; border-radius: 6px; color: var(--muted); text-decoration: none; }
+.toc-page .pn { flex: none; width: 2.2em; text-align: right; color: var(--faint); font-variant-numeric: tabular-nums; }
+.toc-page .t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.toc-page:hover { background: var(--hover); color: var(--text); }
+.toc-page.active { background: var(--accent-soft); color: var(--accent); }
+.toc-page.active .pn { color: var(--accent); }
+.toc-page.state-skip, .toc-page.state-missing { opacity: .5; }
+.toc-page.has-issues::after { content: "!"; margin-left: auto; padding-left: 4px; font-weight: 700; color: var(--err); }
+
+/* ---- 正文 ---- */
+main { margin-left: var(--toc-w); padding: calc(var(--topbar) + 20px) 32px 96px; }
+.wrap { max-width: 1400px; margin: 0 auto; }
+.legend {
+  display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center;
+  margin: 0 0 8px; padding: 10px 14px; font-size: 13px; color: var(--muted);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+}
+.reading { margin: 0 0 10px; font-size: 15px; color: var(--muted); }
+.reading strong { color: var(--text); }
+.section-head { margin: 40px 0 0; padding-bottom: 12px; border-bottom: 2px solid var(--text); scroll-margin-top: calc(var(--topbar) + 12px); }
+.section-head .sec-no { margin: 0; font-size: 12px; letter-spacing: .08em; color: var(--muted); }
+.section-head h2 { margin: 2px 0 6px; font-size: 24px; line-height: 1.35; }
+.summary { margin: 4px 0 0; max-width: 72ch; font-size: 15px; color: var(--muted); }
+
+.page {
+  display: grid; grid-template-columns: minmax(0, 46fr) minmax(0, 54fr); gap: 32px;
+  padding: 28px 0; border-bottom: 1px solid var(--line); scroll-margin-top: calc(var(--topbar) + 12px);
+}
+.slides { position: sticky; top: calc(var(--topbar) + 16px); align-self: start; display: grid; gap: 12px; }
+.page.multi .slides { position: relative; top: auto; }
+.slide { position: relative; scroll-margin-top: calc(var(--topbar) + 12px); }
+.slide-no {
+  position: absolute; left: 8px; top: 8px; padding: 0 6px; font-size: 11.5px; line-height: 1.7; border-radius: 4px;
+  color: var(--muted); background: var(--surface); border: 1px solid var(--line);
+}
+.slide img {
+  display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px;
+  background: #fff; filter: var(--slide-filter);
+}
+.slide.flash img { animation: flash 1.8s ease; }
+@keyframes flash {
+  0%, 45% { outline: 3px solid var(--accent); outline-offset: 3px; }
+  100% { outline: 3px solid transparent; outline-offset: 3px; }
+}
+.slides.is-hidden img { filter: blur(16px) saturate(.6); }
+.slides .reveal {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  padding: 10px 16px; border-radius: 999px; cursor: pointer; font-size: 14px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--text); box-shadow: 0 4px 16px rgba(0,0,0,.12);
+}
+.slides:not(.is-hidden) .reveal { display: none; }
+
+.explain { min-width: 0; }
+.page-meta { display: flex; gap: 8px; align-items: center; font-size: 12.5px; color: var(--muted); }
+.kind { padding: 1px 8px; border-radius: 999px; background: var(--hover); }
+.gist { margin: 6px 0 14px; font-size: 18px; font-weight: 600; line-height: 1.55; }
+.page-toc {
+  display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0 0 18px; padding: 8px 12px;
+  font-size: 13px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+}
+.page-toc span { color: var(--muted); }
+.page-toc a { text-decoration: none; }
+.page-toc a:hover { text-decoration: underline; }
+.note { margin: 10px 0; padding: 12px 14px; color: var(--muted); border: 1px dashed var(--line); border-radius: 8px; }
+.page-issues { margin: 8px 0 14px; padding: 10px 14px; font-size: 14px; color: var(--err); background: var(--err-soft); border-radius: 8px; }
+.page-issues ul { margin: 4px 0 0; padding-left: 1.2em; }
+
+/* ---- 讲解块 ---- */
+.block { margin: 0 0 22px; scroll-margin-top: calc(var(--topbar) + 12px); }
+.block > h4 { display: flex; gap: 8px; align-items: baseline; margin: 0 0 6px; font-size: 15.5px; line-height: 1.5; }
+.block-label {
+  flex: none; padding: 1px 7px; font-size: 11.5px; font-weight: 600; border-radius: 4px;
+  color: var(--muted); background: var(--hover);
+}
+.block p { margin: 0; }
+.block-pitfall { padding: 12px 14px; border-left: 3px solid var(--warn); background: var(--warn-soft); border-radius: 0 8px 8px 0; }
+.block-pitfall .block-label { color: var(--warn); background: transparent; padding: 0; }
+.block-erratum { border-left-color: var(--err); background: var(--err-soft); }
+.block-erratum .block-label { color: var(--err); }
+.block-example { padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+
+.seg-supplement { background: var(--supp-bg); border-radius: 3px; padding: 1px 0; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+body.no-supp-tint .seg-supplement { background: none; }
+.seg-unv { text-decoration: underline dotted var(--unv); text-underline-offset: 4px; }
+.tag {
+  display: inline-block; margin: 0 4px 0 3px; padding: 0 6px; font-size: 11.5px; line-height: 1.65;
+  border-radius: 4px; vertical-align: 1px; white-space: nowrap; font-weight: 500;
+}
+.tag-slide { color: var(--accent); background: var(--accent-soft); }
+.tag-slide a { color: inherit; text-decoration: none; }
+.tag-slide a:hover { text-decoration: underline; }
+.tag-supplement { color: var(--supp-tag); background: var(--supp-tag-bg); }
+.tag-memory { color: var(--accent); border: 1px solid var(--accent); text-decoration: none; line-height: 1.5; }
+.tag-unv { color: var(--unv); background: var(--unv-soft); }
+.tag-line { display: block; margin-top: -4px; text-align: right; }
+.glue { white-space: nowrap; }
+
+.steps { margin: 0; padding-left: 1.8em; }
+.steps li { margin: 4px 0 14px; }
+.steps li::marker { color: var(--muted); font-size: 14px; }
+.math { overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
+.math .katex-display { margin: 4px 0; }
+.why { font-size: 15px; color: var(--muted); }
+.katex-display { overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
+
+figure { margin: 0; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; margin: 4px 0 6px; font-size: 14.5px; line-height: 1.6; }
+th, td { padding: 4px 14px; text-align: left; border: 1px solid var(--line); }
+th { font-weight: 600; background: var(--hover); }
+figcaption { font-size: 14px; color: var(--muted); }
+
+pre { margin: 4px 0; padding: 12px 14px; overflow-x: auto; font-size: 14px; line-height: 1.55; background: var(--code-bg); border-radius: 8px; }
+pre code.hljs { padding: 0; background: transparent; }
+code { font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; }
+.code-src { font-size: 13px; color: var(--muted); }
+
+/* ---- 习题 ---- */
+.exercise { padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.exercise > h4 .block-label { color: var(--accent); background: var(--accent-soft); }
+.ex-answer { display: block; margin: 12px 0 4px; }
+.ex-answer span { display: block; margin-bottom: 4px; font-size: 13px; color: var(--muted); }
+textarea {
+  width: 100%; padding: 8px 10px; font: inherit; font-size: 15px; line-height: 1.6; resize: vertical;
+  color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+}
+textarea:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+.hints { list-style: none; margin: 10px 0 0; padding: 0; }
+.hints li { margin: 8px 0; padding: 8px 12px; background: var(--accent-soft); border-radius: 8px; }
+.hint-label { margin-right: 8px; font-size: 13px; font-weight: 600; color: var(--accent); }
+.ex-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.btn {
+  padding: 6px 14px; font-size: 14px; border-radius: 8px; cursor: pointer;
+  color: var(--accent); background: var(--surface); border: 1px solid var(--accent);
+}
+.btn:hover:not(:disabled) { background: var(--accent-soft); }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn-solution { color: var(--on-accent); background: var(--accent); }
+.btn-solution:hover:not(:disabled) { background: var(--accent); filter: brightness(1.08); }
+.solution { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); }
+.solution .block:last-child { margin-bottom: 0; }
+
+/* ---- 术语表 ---- */
+.terms {
+  position: fixed; top: var(--topbar); right: 0; bottom: 0; z-index: 25; width: min(380px, 100vw);
+  display: flex; flex-direction: column; background: var(--surface); border-left: 1px solid var(--line);
+  transform: translateX(100%); transition: transform .2s ease; visibility: hidden;
+}
+body.terms-open .terms { transform: none; visibility: visible; box-shadow: -8px 0 24px rgba(0,0,0,.08); }
+.terms-head { padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
+.terms-head h2 { margin: 0 0 8px; font-size: 16px; }
+.terms-head input {
+  width: 100%; padding: 7px 10px; font: inherit; font-size: 14px;
+  color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+}
+.terms ul { list-style: none; margin: 0; padding: 4px 16px 48px; overflow-y: auto; }
+.terms li { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.terms li a { display: flex; gap: 8px; align-items: baseline; color: var(--text); text-decoration: none; }
+.terms li a:hover strong { color: var(--accent); }
+.terms .aliases { font-size: 13px; color: var(--muted); }
+.terms .pg { margin-left: auto; font-size: 12px; color: var(--faint); white-space: nowrap; }
+.terms p { margin: 2px 0 0; font-size: 14px; line-height: 1.6; color: var(--muted); }
+.terms .empty { padding: 16px; color: var(--muted); font-size: 14px; }
+
+footer { margin-top: 40px; font-size: 12px; color: var(--faint); text-align: center; }
+
+/* ---- 窄屏 ---- */
+@media (max-width: 1100px) {
+  #toggle-toc { display: inline-block; }
+  .toc { transform: translateX(-100%); transition: transform .2s ease; visibility: hidden; background: var(--surface); }
+  body.toc-open .toc { transform: none; visibility: visible; box-shadow: 8px 0 24px rgba(0,0,0,.08); }
+  main { margin-left: 0; }
+}
+@media (max-width: 760px) {
+  main { padding: calc(var(--topbar) + 12px) 16px 64px; }
+  .page { grid-template-columns: 1fr; gap: 14px; }
+  .slides { position: relative; top: auto; }
+  .progress, #toggle-supp { display: none; }
+  .heading .course { display: none; }
+  .gist { font-size: 17px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+@media print {
+  .topbar, .toc, .terms, .ex-actions, .ex-answer, .legend { display: none !important; }
+  main { margin: 0; padding: 0; }
+  .slides { position: static; }
+  .page { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+{% macro tag(src, unverified=false, prefix='') -%}
+{%- if src.type == 'slide' -%}
+<span class="tag tag-slide">{{ prefix }}{% for p in src.pages %}<a href="#p{{ p }}" data-page="{{ p }}">p.{{ p }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</span>
+{%- elif src.type == 'memory' -%}
+<a class="tag tag-memory" href="../{{ src.lecture }}/index.html#p{{ src.page }}">{{ prefix }}{{ src.lecture }} p.{{ src.page }}</a>
+{%- else -%}
+<span class="tag tag-supplement">{{ prefix }}补充</span>
+{%- endif -%}
+{%- if unverified %}<span class="tag tag-unv">⚠ 待核实</span>{% endif -%}
+{%- endmacro %}
+
+{% macro runs(items) -%}
+{%- for r in items -%}
+{%- set cls = 'seg seg-' ~ r.src.type ~ (' seg-unv' if r.unverified else '') -%}
+{%- if r.display_end -%}
+<span class="{{ cls }}">{{ r.head }}</span><span class="tag-line">{{ tag(r.src, r.unverified) }}</span>
+{%- elif r.tail -%}
+<span class="{{ cls }}">{{ r.head }}</span><span class="glue"><span class="{{ cls }}">{{ r.tail }}</span>{{ tag(r.src, r.unverified) }}</span>
+{%- else -%}
+<span class="{{ cls }}">{{ r.head }}</span>{{ tag(r.src, r.unverified) }}
+{%- endif -%}
+{%- endfor -%}
+{%- endmacro %}
+
+{% macro heading(b, label) -%}
+<h4>{% if label %}<span class="block-label">{{ label }}</span>{% endif %}<span>{{ b.title }}</span></h4>
+{%- endmacro %}
+
+{% macro block(b) %}
+{% if b.kind in ['explain', 'figure', 'example', 'pitfall'] %}
+<div class="block block-{{ b.kind }}{% if b.erratum %} block-erratum{% endif %}" id="{{ b.anchor }}">
+  {{ heading(b, '勘误' if b.erratum else block_labels[b.kind]) }}
+  <p>{{ runs(b.runs) }}</p>
+</div>
+{% elif b.kind == 'derivation' %}
+<div class="block block-derivation" id="{{ b.anchor }}">
+  {{ heading(b, block_labels.derivation) }}
+  <ol class="steps">
+  {% for s in b.steps %}
+    <li><div class="math" data-tex="{{ s.math }}">{{ s.math }}</div><p class="why">{{ s.why }}{{ tag(s.src, s.unverified, '式子 ') }}</p></li>
+  {% endfor %}
+  </ol>
+</div>
+{% elif b.kind == 'table' %}
+<figure class="block block-table" id="{{ b.anchor }}">
+  {{ heading(b, block_labels.table) }}
+  <div class="table-wrap"><table>
+    <thead><tr>{% for h in b.header %}<th>{{ h }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for row in b.rows %}<tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+  </table></div>
+  <figcaption>{{ b.caption }}{{ tag(b.src, b.unverified, '数据 ') }}</figcaption>
+</figure>
+{% elif b.kind == 'code' %}
+<div class="block block-code" id="{{ b.anchor }}">
+  {{ heading(b, block_labels.code) }}
+  <pre><code class="language-{{ b.lang }}">{{ b.code }}</code></pre>
+  <p class="code-src">{{ tag(b.src, b.unverified, '代码 ') }}</p>
+</div>
+{% elif b.kind == 'exercise' %}
+<div class="block exercise" id="{{ b.anchor }}" data-key="{{ storage_key }}:{{ b.anchor }}">
+  {{ heading(b, block_labels.exercise) }}
+  <p class="ex-analysis">{{ runs(b.analysis) }}</p>
+  <label class="ex-answer"><span>先自己做一做，可以把答案写在这里（只保存在这台电脑的浏览器里）</span><textarea rows="3" placeholder="你的答案……"></textarea></label>
+  <ol class="hints">
+  {% for h in b.hints %}
+    <li hidden><span class="hint-label">提示 {{ loop.index }}</span>{{ runs(h) }}</li>
+  {% endfor %}
+  </ol>
+  <div class="ex-actions">
+    <button type="button" class="btn btn-hint">看提示 1/{{ b.hints|length }}</button>
+    <button type="button" class="btn btn-solution" aria-expanded="false">看完整解答</button>
+  </div>
+  <div class="solution" hidden>
+  {% for s in b.solution %}{{ block(s) }}{% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endmacro %}
+
+<header class="topbar">
+  <button type="button" class="chip" id="toggle-toc" aria-controls="toc" aria-expanded="false">目录</button>
+  <div class="heading">
+    <span class="course">{{ course }}{% if course %} · {% endif %}{{ lecture.id }}</span>
+    <h1>{{ lecture.title }}</h1>
+  </div>
+  <div class="tools">
+    <span class="progress">已讲解 {{ counts.explained }}/{{ counts.total - counts.skipped }} 页</span>
+    <button type="button" class="chip" id="toggle-supp" aria-pressed="true" title="给讲解者补充的内容加底色">补充底色</button>
+    <button type="button" class="chip" id="toggle-terms" aria-controls="terms" aria-expanded="false">术语 {{ terms|length }}</button>
+  </div>
+</header>
+
+<nav class="toc" id="toc" aria-label="目录">
+  <ol>
+  {% for s in sections %}
+    <li>
+      <a class="toc-sec" href="#{{ s.id }}">{{ s.title }}</a>
+      <ol>
+      {% for p in s.nav %}
+        <li><a class="toc-page state-{{ p.state }}{% if p.has_issues %} has-issues{% endif %}" href="#p{{ p.no }}" data-page="{{ p.no }}" title="{{ p.nav_title }}"><span class="pn">{{ p.no }}</span><span class="t">{{ p.nav_title }}</span></a></li>
+      {% endfor %}
+      </ol>
+    </li>
+  {% endfor %}
+  </ol>
+</nav>
+
+<main>
+<div class="wrap">
+  <p class="reading">预计阅读约 <strong>{{ reading.minutes }} 分钟</strong>：讲解约 {{ '{:,}'.format(reading.chars) }} 字，课件 {{ reading.slides }} 页{% if counts.missing %}（还有 {{ counts.missing }} 页没讲解，不计在内）{% endif %}。习题的完整解答默认收起，不计在内。</p>
+  <p class="legend">
+    <span><span class="tag tag-slide">p.12</span>来自课件第 12 页，点击跳过去</span>
+    <span><span class="tag tag-supplement">补充</span>讲解者补充的内容</span>
+    <span><span class="tag tag-unv">⚠ 待核实</span>讲解者没把握，请对照课件</span>
+  </p>
+
+  {% for s in sections %}
+  <section class="section">
+    <header class="section-head" id="{{ s.id }}">
+      <p class="sec-no">第 {{ loop.index }} 节 · 第 {{ s.nav[0].no }}–{{ s.nav[-1].no }} 页</p>
+      <h2>{{ s.title }}</h2>
+      {% for m in s.summaries %}<p class="summary">{{ m }}</p>{% endfor %}
+    </header>
+
+    {% for p in s.groups %}
+    <article class="page state-{{ p.state }}{% if p.slides|length > 1 %} multi{% endif %}" data-first="{{ p.first }}">
+      <div class="slides{% if p.hide_slide %} is-hidden{% endif %}">
+        {% for sl in p.slides %}
+        <div class="slide" id="p{{ sl.no }}" data-page="{{ sl.no }}">
+          {% if sl.image_link %}<a href="{{ sl.image_link }}" target="_blank" rel="noopener">{% endif %}<img src="{{ sl.image }}" width="{{ sl.size[0] }}" height="{{ sl.size[1] }}" loading="lazy" alt="课件第 {{ sl.no }} 页">{% if sl.image_link %}</a>{% endif %}
+          {% if p.slides|length > 1 %}<span class="slide-no">p.{{ sl.no }}</span>{% endif %}
+        </div>
+        {% endfor %}
+        {% if p.hide_slide %}<button type="button" class="reveal">这{{ '几' if p.slides|length > 1 else '' }}页课件印着答案，点击显示</button>{% endif %}
+      </div>
+      <div class="explain">
+        <div class="page-meta"><span>{{ p.label }}</span>{% if p.kind_label %}<span class="kind">{{ p.kind_label }}</span>{% endif %}</div>
+        {% if p.issues %}
+        <div class="page-issues" role="alert"><strong>这部分讲解没有通过校验</strong>
+          <ul>{% for m in p.issues %}<li>{{ m }}</li>{% endfor %}</ul>
+        </div>
+        {% endif %}
+        {% if p.state == 'explained' %}
+          <p class="gist">{{ p.gist }}</p>
+          {% if p.blocks|length >= 3 %}
+          <nav class="page-toc" aria-label="{{ p.label }}目录"><span>本组</span>{% for b in p.blocks %}<a href="#{{ b.anchor }}">{{ b.title }}</a>{% endfor %}</nav>
+          {% endif %}
+          {% for b in p.blocks %}{{ block(b) }}{% endfor %}
+        {% elif p.state == 'skip' %}
+          <p class="note">这一页不需要讲解。</p>
+        {% elif p.state == 'missing' %}
+          <p class="note">这一页还没有讲解。</p>
+        {% else %}
+          <p class="note">这一部分的讲解文件格式有误，暂时无法显示。</p>
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  </section>
+  {% endfor %}
+
+  <footer>由 lecture-explainer 生成 · 讲解内容由 AI 撰写，标为“补充”和“待核实”的部分请对照课件和教材</footer>
+</div>
+</main>
+
+<aside class="terms" id="terms" aria-label="术语表">
+  <div class="terms-head">
+    <h2>本讲术语</h2>
+    <input type="search" id="terms-search" placeholder="搜索术语或释义" autocomplete="off">
+  </div>
+  {% if terms %}
+  <ul id="terms-list">
+  {% for t in terms %}
+    <li data-search="{{ ([t.term] + t.aliases + [t.definition])|join(' ')|lower }}">
+      <a href="#p{{ t.page }}" data-page="{{ t.page }}"><strong>{{ t.term }}</strong>{% if t.aliases %}<span class="aliases">{{ t.aliases|join('、') }}</span>{% endif %}<span class="pg">p.{{ t.page }}</span></a>
+      <p>{{ t.definition }}</p>
+    </li>
+  {% endfor %}
+  </ul>
+  {% else %}
+  <p class="empty">这一讲还没有收录术语。</p>
+  {% endif %}
+</aside>
+
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  "use strict";
+  var body = document.body;
+
+  // ---- 本机存储：浏览器不允许时照常使用，只是不记住 ----
+  var store = (function () {
+    try { var k = "__lx_test"; localStorage.setItem(k, "1"); localStorage.removeItem(k); return localStorage; }
+    catch (e) { return null; }
+  })();
+  function load(key, fallback) {
+    if (!store) return fallback;
+    try { var v = store.getItem(key); return v === null ? fallback : JSON.parse(v); } catch (e) { return fallback; }
+  }
+  function save(key, value) {
+    if (!store) return;
+    try { store.setItem(key, JSON.stringify(value)); } catch (e) {}
+  }
+
+  // ---- 公式和代码 ----
+  if (window.katex) {
+    document.querySelectorAll(".math[data-tex]").forEach(function (el) {
+      try { window.katex.render(el.getAttribute("data-tex"), el, { displayMode: true, throwOnError: false }); } catch (e) {}
+    });
+  }
+  if (window.renderMathInElement) {
+    window.renderMathInElement(body, {
+      delimiters: [
+        { left: "$$", right: "$$", display: true },
+        { left: "$", right: "$", display: false }
+      ],
+      ignoredClasses: ["math"],
+      throwOnError: false
+    });
+  }
+  if (window.hljs) {
+    document.querySelectorAll("pre code").forEach(function (el) { window.hljs.highlightElement(el); });
+  }
+
+  // ---- 顶栏开关 ----
+  var tocBtn = document.getElementById("toggle-toc");
+  var termsBtn = document.getElementById("toggle-terms");
+  var suppBtn = document.getElementById("toggle-supp");
+  function setOpen(cls, btn, open) {
+    body.classList.toggle(cls, open);
+    btn.setAttribute("aria-expanded", String(open));
+  }
+  tocBtn.addEventListener("click", function () { setOpen("toc-open", tocBtn, !body.classList.contains("toc-open")); });
+  termsBtn.addEventListener("click", function () {
+    var open = !body.classList.contains("terms-open");
+    setOpen("terms-open", termsBtn, open);
+    if (open) document.getElementById("terms-search").focus({ preventScroll: true });
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") { setOpen("terms-open", termsBtn, false); setOpen("toc-open", tocBtn, false); }
+  });
+  var suppKey = "lecture-explainer:supp-tint";
+  function paintSupp(on) { body.classList.toggle("no-supp-tint", !on); suppBtn.setAttribute("aria-pressed", String(on)); }
+  paintSupp(load(suppKey, true));
+  suppBtn.addEventListener("click", function () {
+    var on = body.classList.contains("no-supp-tint");
+    save(suppKey, on); paintSupp(on);
+  });
+
+  // ---- 点击来源标签、目录、术语：跳到那一页并闪一下课件图 ----
+  var narrow = window.matchMedia("(max-width: 1100px)");
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest("a[data-page]");
+    if (!a) return;
+    var slide = document.getElementById("p" + a.getAttribute("data-page"));
+    if (slide) {
+      slide.classList.remove("flash"); void slide.offsetWidth; slide.classList.add("flash");
+    }
+    if (narrow.matches) { setOpen("toc-open", tocBtn, false); }
+    if (a.closest(".terms") && window.matchMedia("(max-width: 760px)").matches) { setOpen("terms-open", termsBtn, false); }
+  });
+
+  // ---- 目录跟随滚动 ----
+  var toc = document.getElementById("toc");
+  var links = {};
+  toc.querySelectorAll("a.toc-page").forEach(function (a) { links[a.getAttribute("data-page")] = a; });
+  var current = null;
+  function setActive(no) {
+    var a = links[no];
+    if (!a || a === current) return;
+    if (current) current.classList.remove("active");
+    a.classList.add("active"); current = a;
+    var top = a.offsetTop, h = toc.clientHeight;
+    if (top < toc.scrollTop + 40 || top > toc.scrollTop + h - 60) toc.scrollTop = top - h / 3;
+  }
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) { if (en.isIntersecting) setActive(en.target.getAttribute("data-page")); });
+    }, { rootMargin: "-35% 0px -60% 0px" });
+    document.querySelectorAll(".slide[data-page]").forEach(function (s) { io.observe(s); });
+  }
+
+  // ---- 印着答案的课件图：点击才显示 ----
+  document.querySelectorAll(".slides.is-hidden").forEach(function (box) {
+    function reveal(e) { if (box.classList.contains("is-hidden")) { e.preventDefault(); box.classList.remove("is-hidden"); } }
+    // 有链接时拦截链接（图片在链接里面），单文件版没有链接时拦截图片本身
+    box.querySelectorAll(".slide").forEach(function (slide) {
+      (slide.querySelector("a") || slide.querySelector("img")).addEventListener("click", reveal);
+    });
+    box.querySelector(".reveal").addEventListener("click", reveal);
+  });
+
+  // ---- 习题：逐条看提示、看解答、写答案，进度存在本机 ----
+  document.querySelectorAll(".exercise").forEach(function (ex) {
+    var key = ex.getAttribute("data-key");
+    var hints = Array.prototype.slice.call(ex.querySelectorAll(":scope > .hints > li"));
+    var hintBtn = ex.querySelector(":scope > .ex-actions > .btn-hint");
+    var solBtn = ex.querySelector(":scope > .ex-actions > .btn-solution");
+    var sol = ex.querySelector(":scope > .solution");
+    var ta = ex.querySelector(":scope > .ex-answer textarea");
+    var state = load(key, null) || { hints: 0, solution: false, answer: "" };
+    function paint() {
+      hints.forEach(function (li, i) { li.hidden = i >= state.hints; });
+      if (state.hints >= hints.length) { hintBtn.disabled = true; hintBtn.textContent = "提示已全部展开"; }
+      else { hintBtn.disabled = false; hintBtn.textContent = "看提示 " + (state.hints + 1) + "/" + hints.length; }
+      sol.hidden = !state.solution;
+      solBtn.textContent = state.solution ? "收起完整解答" : "看完整解答";
+      solBtn.setAttribute("aria-expanded", String(state.solution));
+    }
+    ta.value = state.answer || "";
+    hintBtn.addEventListener("click", function () { state.hints = Math.min(hints.length, state.hints + 1); save(key, state); paint(); });
+    solBtn.addEventListener("click", function () { state.solution = !state.solution; save(key, state); paint(); });
+    var timer = null;
+    ta.addEventListener("input", function () {
+      clearTimeout(timer);
+      timer = setTimeout(function () { state.answer = ta.value; save(key, state); }, 300);
+    });
+    paint();
+  });
+
+  // ---- 术语搜索 ----
+  var search = document.getElementById("terms-search");
+  var items = document.querySelectorAll("#terms-list > li");
+  search.addEventListener("input", function () {
+    var q = search.value.trim().toLowerCase();
+    items.forEach(function (li) { li.hidden = q && li.getAttribute("data-search").indexOf(q) === -1; });
+  });
+});
+</script>
+</body>
+</html>

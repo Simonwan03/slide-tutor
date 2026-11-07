@@ -1,0 +1,16 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# 课件和由课件生成的内容：版权属于讲师和教材作者，不进仓库
+exemple/
+courses/
+*.pdf
+
+# Claude Code 本地设置
+.claude/settings.local.json
+
+# 开发时把 skill 用目录链接装进项目，链接本身不进仓库
+.claude/skills/

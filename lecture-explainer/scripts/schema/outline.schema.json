@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "outline.json：一讲的切节结果（由模型写，prepare.py 校验）",
+  "type": "object",
+  "required": ["lecture", "sections", "skip"],
+  "additionalProperties": false,
+  "properties": {
+    "lecture": {"type": "string", "minLength": 1},
+    "sections": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "pages"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string", "pattern": "^s\\d{2}$"},
+          "title": {"type": "string", "minLength": 1},
+          "pages": {
+            "description": "[起始页, 结束页]，含两端",
+            "type": "array",
+            "prefixItems": [
+              {"type": "integer", "minimum": 1},
+              {"type": "integer", "minimum": 1}
+            ],
+            "minItems": 2,
+            "maxItems": 2
+          }
+        }
+      }
+    },
+    "skip": {
+      "description": "不需要讲解的页（结尾的 Questions 页、空白页等）",
+      "type": "array",
+      "items": {"type": "integer", "minimum": 1},
+      "uniqueItems": true
+    }
+  }
+}

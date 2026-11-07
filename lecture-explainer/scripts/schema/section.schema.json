@@ -1,0 +1,206 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "sections/<单元>.json：一个讲解单元的逐页讲解（由模型写，validate.py 校验）",
+  "type": "object",
+  "required": ["lecture", "unit", "section", "section_summary", "pages"],
+  "additionalProperties": false,
+  "properties": {
+    "lecture": {"type": "string", "minLength": 1},
+    "unit": {"type": "string", "minLength": 1},
+    "section": {"type": "string", "pattern": "^s\\d{2}$"},
+    "section_summary": {"type": "string", "minLength": 1},
+    "pages": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/page"}}
+  },
+  "$defs": {
+    "page": {
+      "description": "一个讲解组：单独一页用 page，连续几页合在一起讲用 range",
+      "type": "object",
+      "required": ["kind", "gist", "blocks"],
+      "additionalProperties": false,
+      "oneOf": [{"required": ["page"]}, {"required": ["range"]}],
+      "properties": {
+        "page": {"type": "integer", "minimum": 1},
+        "range": {
+          "description": "[第一页, 最后一页]，含两端",
+          "type": "array",
+          "prefixItems": [
+            {"type": "integer", "minimum": 1},
+            {"type": "integer", "minimum": 1}
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "kind": {"enum": ["text", "formula", "table", "figure", "code", "exercise", "divider"]},
+        "gist": {"type": "string", "minLength": 1},
+        "blocks": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/block"}},
+        "terms": {"type": "array", "items": {"$ref": "#/$defs/term"}}
+      }
+    },
+
+    "block": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": {"enum": ["explain", "figure", "example", "pitfall", "derivation", "table", "code", "exercise"]}
+      },
+      "allOf": [
+        {"if": {"properties": {"kind": {"enum": ["explain", "figure", "example", "pitfall"]}}},
+         "then": {"$ref": "#/$defs/segments_block"}},
+        {"if": {"properties": {"kind": {"const": "derivation"}}},
+         "then": {"$ref": "#/$defs/derivation_block"}},
+        {"if": {"properties": {"kind": {"const": "table"}}},
+         "then": {"$ref": "#/$defs/table_block"}},
+        {"if": {"properties": {"kind": {"const": "code"}}},
+         "then": {"$ref": "#/$defs/code_block"}},
+        {"if": {"properties": {"kind": {"const": "exercise"}}},
+         "then": {"$ref": "#/$defs/exercise_block"}}
+      ]
+    },
+
+    "segments_block": {
+      "type": "object",
+      "required": ["kind", "title", "segments"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {"enum": ["explain", "figure", "example", "pitfall"]},
+        "title": {"$ref": "#/$defs/title"},
+        "segments": {"$ref": "#/$defs/segments"}
+      }
+    },
+
+    "derivation_block": {
+      "type": "object",
+      "required": ["kind", "title", "steps"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {"const": "derivation"},
+        "title": {"$ref": "#/$defs/title"},
+        "steps": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/step"}}
+      }
+    },
+
+    "table_block": {
+      "type": "object",
+      "required": ["kind", "title", "header", "rows", "src"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {"const": "table"},
+        "title": {"$ref": "#/$defs/title"},
+        "caption": {"type": "string"},
+        "header": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "rows": {"type": "array", "items": {"type": "array", "items": {"type": "string"}}},
+        "src": {"$ref": "#/$defs/src"},
+        "status": {"$ref": "#/$defs/status"}
+      }
+    },
+
+    "code_block": {
+      "type": "object",
+      "required": ["kind", "title", "lang", "code", "src"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {"const": "code"},
+        "title": {"$ref": "#/$defs/title"},
+        "lang": {"type": "string", "minLength": 1},
+        "code": {"type": "string", "minLength": 1},
+        "src": {"$ref": "#/$defs/src"},
+        "status": {"$ref": "#/$defs/status"}
+      }
+    },
+
+    "exercise_block": {
+      "type": "object",
+      "required": ["kind", "title", "analysis", "hints", "solution"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {"const": "exercise"},
+        "title": {"$ref": "#/$defs/title"},
+        "answer_on_slide": {"type": "boolean"},
+        "analysis": {"$ref": "#/$defs/segments"},
+        "hints": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/segments"}},
+        "solution": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/block",
+            "not": {"properties": {"kind": {"const": "exercise"}}, "required": ["kind"]}
+          }
+        }
+      }
+    },
+
+    "segments": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/segment"}},
+
+    "segment": {
+      "type": "object",
+      "required": ["text", "src"],
+      "additionalProperties": false,
+      "properties": {
+        "text": {"type": "string", "minLength": 1},
+        "src": {"$ref": "#/$defs/src"},
+        "status": {"$ref": "#/$defs/status"}
+      }
+    },
+
+    "step": {
+      "type": "object",
+      "required": ["math", "why", "src"],
+      "additionalProperties": false,
+      "properties": {
+        "math": {"type": "string", "minLength": 1},
+        "why": {"type": "string", "minLength": 1},
+        "src": {"$ref": "#/$defs/src"},
+        "status": {"$ref": "#/$defs/status"}
+      }
+    },
+
+    "src": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {"type": {"enum": ["slide", "supplement", "memory"]}},
+      "allOf": [
+        {"if": {"properties": {"type": {"const": "slide"}}},
+         "then": {
+           "required": ["type", "pages"],
+           "additionalProperties": false,
+           "properties": {
+             "type": {"const": "slide"},
+             "pages": {"type": "array", "minItems": 1, "items": {"type": "integer", "minimum": 1}}
+           }
+         }},
+        {"if": {"properties": {"type": {"const": "supplement"}}},
+         "then": {
+           "additionalProperties": false,
+           "properties": {"type": {"const": "supplement"}}
+         }},
+        {"if": {"properties": {"type": {"const": "memory"}}},
+         "then": {
+           "required": ["type", "lecture", "page"],
+           "additionalProperties": false,
+           "properties": {
+             "type": {"const": "memory"},
+             "lecture": {"type": "string", "minLength": 1},
+             "page": {"type": "integer", "minimum": 1}
+           }
+         }}
+      ]
+    },
+
+    "status": {"const": "unverified"},
+
+    "title": {"type": "string", "minLength": 1},
+
+    "term": {
+      "type": "object",
+      "required": ["term", "definition", "page"],
+      "additionalProperties": false,
+      "properties": {
+        "term": {"type": "string", "minLength": 1},
+        "aliases": {"type": "array", "items": {"type": "string"}},
+        "kind": {"enum": ["term", "concept"]},
+        "definition": {"type": "string", "minLength": 1},
+        "page": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}
